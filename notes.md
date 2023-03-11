@@ -29,7 +29,10 @@ Metadata
   - add(item)
 
 
-  
+## TODOs
+
+- make a few proper test cases for the Cache (in particular with parallel processing!)
+- use logging statements instead of logfunc (and maybe with different levels of verbosity?!)
 
 
 ## MetadataStorage
