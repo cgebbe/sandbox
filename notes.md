@@ -7,23 +7,29 @@
 
 ## APIs
 
-- Cache
+Metadata
+
+- Cache = Store + Metadata
   - get(hsh)
-    - update last accessed in metadata
-    - store.get(...)
+    - 
+    - return Store.get(hsh)
   - put(hsh, item)
-    - append to metadata
     - store.put(..)
-    - evict cache if necessary
+    - MetadataStore.put(hsh, info_dict)
+    - MetadataStore.get_evicted_items
+- Store
+  - get(hsh)
+  - put(obj, hsh) -> byte_size?!
 - Hasher
   - function kwargs + id
   - https://stackoverflow.com/questions/830937/python-convert-args-to-kwargs
 - CacheItem
   - hash = ...
-  - 
 - MetadataStorage
   - add(item)
 
+
+  
 
 
 ## MetadataStorage
@@ -57,3 +63,24 @@ Implementation options:
 - sqlalchemy and sqlite is likely the solution  
     - https://docs.sqlalchemy.org/en/20/orm/quickstart.html
     - A bit more tricky, but seems like correct choice
+
+
+## Why is joblib not sufficient?
+
+- does not work across jupyter notebook sessions because dir is named according to kernel (this may very well be intended, but doesn't serve my use case)
+- unclear to me how exactly hashing works
+
+```
+cache
+cache/joblib
+cache/joblib/__main__--tmp-ipykernel-4032011732
+cache/joblib/__main__--tmp-ipykernel-4032011732/get_gdf
+cache/joblib/__main__--tmp-ipykernel-4032011732/get_gdf/4652c901c0c669e4db83383b50f91968
+cache/joblib/__main__--tmp-ipykernel-4032011732/get_gdf/4652c901c0c669e4db83383b50f91968/output.pkl
+cache/joblib/__main__--tmp-ipykernel-4032011732/get_gdf/4652c901c0c669e4db83383b50f91968/metadata.json
+cache/joblib/__main__--tmp-ipykernel-4032011732/get_gdf/func_code.py
+```
+
+## TODO
+
+- also hash function code and at least warn when changed? Not sure... 

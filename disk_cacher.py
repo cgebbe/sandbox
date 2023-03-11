@@ -1,3 +1,9 @@
+#%%
+import utils
+
+utils.setup_ipython()
+
+
 # %%
 import inspect
 from assertpy import assert_that
@@ -19,7 +25,8 @@ def test_resolve_args():
     assert_that(a).is_equal_to(e)
 
 
-test_resolve_args()
+if utils.run_as_cell(__name__):
+    test_resolve_args()
 
 # %%
 from deepdiff import DeepHash
@@ -43,7 +50,50 @@ def test_hash_obj():
     assert_that(a).is_equal_to(e)
 
 
-test_hash_obj()
+if utils.run_as_cell(__name__):
+    test_hash_obj()
+
+#%% tinydb
+from tinydb import middlewares, storages, database
+import pandas as pd
+import filelock
+import time
+from contextlib import contextmanager
+
+
+class MyTinyDB:
+    """TinyDB with caching and filelocking (for safe parallel processing)."""
+
+    def __init__(self, path) -> None:
+        self.db = database.TinyDB(
+            path,
+            storage=middlewares.CachingMiddleware(storages.JSONStorage),
+        )
+        self.lock = filelock.FileLock(Path(path).with_suffix(".lock"))
+
+    @contextmanager
+    def open(self) -> database.TinyDB:
+        with self.lock:
+            with self.db as db:
+                yield db
+
+
+if utils.run_as_cell(__name__):
+    database = MyTinyDB("db.json")
+
+    def read(x):
+        with database.open() as db:
+            print("entering")
+            db.all()  # verify no error
+            time.sleep(1)
+            print("exiting")
+
+    from concurrent.futures import ProcessPoolExecutor
+
+    with ProcessPoolExecutor(3) as exec:
+        future = exec.map(read, range(4))
+        list(future)
+
 
 # %%
 from pathlib import Path
@@ -51,8 +101,6 @@ import pickle
 import logging
 import shutil
 import tempfile
-import geopandas as gpd
-
 
 LOGGER = logging.getLogger(__name__)
 
@@ -62,10 +110,7 @@ class PickleStore:
         assert isinstance(dirpath, Path)
         dirpath = dirpath.absolute()
         if dirpath.exists():
-            # TODO: accept existing dirs only if
-            # args are as expected?!
-            # ... has metadata and corresponding files
-            # ... is empty
+            # TODO: accept non-empty dir only if has metadata matching dir?!
             LOGGER.warning(f"{dirpath=} already exists")
         else:
             dirpath.mkdir(exist_ok=True)
@@ -92,10 +137,11 @@ class PickleStore:
         return self.dirpath / f"{hash_value}.pkl"
 
 
-from geopandas.testing import assert_geodataframe_equal
-
-
 def test_pickle_store():
+
+    import geopandas as gpd
+    from geopandas.testing import assert_geodataframe_equal
+
     dirpath = tempfile.mkdtemp()
     obj = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
     hsh = "some_random_hash"
@@ -108,13 +154,15 @@ def test_pickle_store():
     store.clear()  # to remove the tempdir, not strictly necessary
 
 
-test_pickle_store()
+if utils.run_as_cell(__name__):
+    test_pickle_store()
 
 #%%
 import functools
+from pathlib import Path
 
 
-class PersistentCache:
+class DiskCache:
     def __init__(self, dirpath: Path, logfunc=print) -> None:
         self.store = PickleStore(dirpath)
         self.logfunc = logfunc
@@ -138,7 +186,7 @@ class PersistentCache:
 
 def test_persistent_cache():
     logs = []
-    cache = PersistentCache(
+    cache = DiskCache(
         dirpath=Path(__file__).parent / "mycache",
         logfunc=logs.append,
     )
@@ -153,7 +201,8 @@ def test_persistent_cache():
     assert_that(logs).is_equal_to(["cache miss", "cache miss", "cache hit"])
 
 
-test_persistent_cache()
+if utils.run_as_cell(__name__):
+    test_persistent_cache()
 
 # %%
 
